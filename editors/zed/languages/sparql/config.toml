@@ -1,0 +1,4 @@
+name = "SPARQL"
+path_suffixes = ["rq", "sparql"]
+line_comments = ["# "]
+block_comment = ["", ""]

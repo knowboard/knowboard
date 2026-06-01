@@ -1,0 +1,4 @@
+name = "RDF XML"
+path_suffixes = ["rdf", "owl"]
+line_comments = []
+block_comment = ["<!--", "-->"]

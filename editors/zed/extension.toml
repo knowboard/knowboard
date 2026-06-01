@@ -1,0 +1,20 @@
+id = "knowboard"
+name = "Knowboard"
+description = "Organize your Personal Knowledge Base in Markdown."
+version = "0.0.1"
+schema_version = 1
+authors = ["Matthew Good"]
+repository = "https://github.com/knowboard/knowboard"
+
+[language_servers.knowboard-lsp]
+name = "Knowboard LSP"
+languages = [
+	"Turtle (RDF)",
+	"JSON-LD",
+	"YAML-LD",
+	"N-Triples",
+	"RDF XML",
+	"SPARQL",
+	"Markdown",
+	"TOML",
+]

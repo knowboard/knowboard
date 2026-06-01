@@ -1,0 +1,4 @@
+name = "N-Triples"
+path_suffixes = ["nt"]
+line_comments = ["# "]
+block_comment = ["", ""]

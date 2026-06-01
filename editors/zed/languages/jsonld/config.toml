@@ -1,0 +1,4 @@
+name = "JSON-LD"
+path_suffixes = ["jsonld"]
+line_comments = []
+block_comment = ["", ""]

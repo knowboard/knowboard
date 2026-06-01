@@ -1,0 +1,4 @@
+name = "YAML-LD"
+path_suffixes = ["yamlld"]
+line_comments = ["# "]
+block_comment = ["", ""]

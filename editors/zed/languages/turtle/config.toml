@@ -1,0 +1,4 @@
+name = "Turtle (RDF)"
+path_suffixes = ["ttl"]
+line_comments = ["# "]
+block_comment = ["", ""]

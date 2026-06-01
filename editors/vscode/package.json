@@ -1,0 +1,166 @@
+{
+  "name": "knowboard-vscode",
+  "displayName": "Knowboard",
+  "description": "Organize your Personal Knowledge Base in Markdown.",
+  "version": "0.0.1",
+  "publisher": "knowboard",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/knowboard/knowboard"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Education"
+  ],
+  "keywords": [
+    "rdf",
+    "lsp",
+    "turtle",
+    "json-ld",
+    "sparql"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/.knowboard.toml"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "knowboard.restartServer",
+        "title": "Restart Language Server",
+        "category": "Knowboard"
+      },
+      {
+        "command": "knowboard.copySparqlUrl",
+        "title": "Copy SPARQL query endpoint",
+        "category": "Knowboard"
+      },
+      {
+        "command": "knowboard.openSparqlUrl",
+        "title": "Open SPARQL UI",
+        "category": "Knowboard"
+      }
+    ],
+    "languages": [
+      {
+        "id": "turtle",
+        "aliases": [
+          "Turtle",
+          "Turtle (RDF)"
+        ],
+        "extensions": [
+          ".ttl"
+        ],
+        "configuration": "./language-configuration/hash-comments.json"
+      },
+      {
+        "id": "jsonld",
+        "aliases": [
+          "JSON-LD"
+        ],
+        "extensions": [
+          ".jsonld"
+        ],
+        "configuration": "./language-configuration/json-like.json"
+      },
+      {
+        "id": "yamlld",
+        "aliases": [
+          "YAML-LD"
+        ],
+        "extensions": [
+          ".yamlld"
+        ],
+        "configuration": "./language-configuration/hash-comments.json"
+      },
+      {
+        "id": "ntriples",
+        "aliases": [
+          "N-Triples"
+        ],
+        "extensions": [
+          ".nt"
+        ],
+        "configuration": "./language-configuration/hash-comments.json"
+      },
+      {
+        "id": "rdfxml",
+        "aliases": [
+          "RDF XML",
+          "RDF/XML"
+        ],
+        "extensions": [
+          ".rdf",
+          ".owl"
+        ],
+        "configuration": "./language-configuration/xml-like.json"
+      },
+      {
+        "id": "sparql",
+        "aliases": [
+          "SPARQL"
+        ],
+        "extensions": [
+          ".rq",
+          ".sparql"
+        ],
+        "configuration": "./language-configuration/hash-comments.json"
+      }
+    ],
+    "configuration": {
+      "title": "Knowboard",
+      "properties": {
+        "knowboard.server.path": {
+          "type": "string",
+          "default": "knowboard-lsp",
+          "description": "Command or absolute path used to launch the knowboard-lsp server. Relative paths are resolved from the first workspace folder."
+        },
+        "knowboard.server.args": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "description": "Additional command-line arguments passed to knowboard-lsp."
+        },
+        "knowboard.server.env": {
+          "type": "object",
+          "default": {},
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Extra environment variables passed to knowboard-lsp."
+        },
+        "knowboard.trace.server": {
+          "type": "string",
+          "enum": [
+            "off",
+            "messages",
+            "verbose"
+          ],
+          "default": "off",
+          "description": "Trace verbosity for the LSP protocol connection."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p .",
+    "watch": "tsc -watch -p .",
+    "package": "vsce package",
+    "vscode:prepublish": "npm run compile"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.50",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^3.6.2",
+    "typescript": "^5.8.3"
+  }
+}
