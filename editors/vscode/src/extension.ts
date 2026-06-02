@@ -1,3 +1,4 @@
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import {
@@ -7,6 +8,8 @@ import {
 	ServerOptions,
 	Trace,
 } from 'vscode-languageclient/node';
+import { binaryPath, downloadBinary, isBinaryInstalled } from './download.js';
+import which from 'which';
 
 const CLIENT_ID = 'knowboard';
 const CLIENT_NAME = 'Knowboard LSP';
@@ -14,10 +17,16 @@ const DEFAULT_SERVER_COMMAND = 'knowboard-lsp';
 const SUPPORTED_LANGUAGES = ['turtle', 'jsonld', 'yamlld', 'ntriples', 'rdfxml', 'sparql', 'markdown'];
 
 let client: LanguageClient | undefined;
+let extensionContext: vscode.ExtensionContext | undefined;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
+	extensionContext = context;
+
 	const outputChannel = vscode.window.createOutputChannel('Knowboard');
 	context.subscriptions.push(outputChannel);
+
+	// Ensure the binary is downloaded before starting the server.
+	await ensureBinaryDownloaded(context, outputChannel);
 
 	context.subscriptions.push(vscode.commands.registerCommand('knowboard.restartServer', async () => {
 		await restartClient(outputChannel);
@@ -46,20 +55,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		}
 	}));
 
-	await startClient(outputChannel);
+	await startClient(context, outputChannel);
 }
 
 export async function deactivate(): Promise<void> {
 	await stopClient();
 }
 
-async function startClient(outputChannel: vscode.OutputChannel): Promise<void> {
+async function startClient(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel): Promise<void> {
 	if (client) {
 		return;
 	}
 
 	const config = vscode.workspace.getConfiguration('knowboard');
-	const command = resolveServerCommand(config);
+	const command = resolveServerCommand(config, context);
 	const args = config.get<string[]>('server.args', []);
 	const envOverrides = config.get<Record<string, string>>('server.env', {});
 
@@ -97,7 +106,9 @@ async function startClient(outputChannel: vscode.OutputChannel): Promise<void> {
 
 async function restartClient(outputChannel: vscode.OutputChannel): Promise<void> {
 	await stopClient();
-	await startClient(outputChannel);
+	if (extensionContext) {
+		await startClient(extensionContext, outputChannel);
+	}
 }
 
 async function stopClient(): Promise<void> {
@@ -109,14 +120,22 @@ async function stopClient(): Promise<void> {
 	}
 }
 
-function resolveServerCommand(config: vscode.WorkspaceConfiguration): string {
+function resolveServerCommand(config: vscode.WorkspaceConfiguration, context: vscode.ExtensionContext): string {
 	const configuredPath = config.get<string>('server.path', DEFAULT_SERVER_COMMAND).trim() || DEFAULT_SERVER_COMMAND;
 
 	if (configuredPath !== DEFAULT_SERVER_COMMAND) {
 		return resolveConfiguredPath(configuredPath);
 	}
 
-	return configuredPath;
+	// Prefer the auto-downloaded binary if it exists.
+	const downloaded = binaryPath(context);
+	try {
+		fs.accessSync(downloaded, fs.constants.X_OK);
+		return downloaded;
+	} catch {
+		// Fall back to PATH.
+		return DEFAULT_SERVER_COMMAND;
+	}
 }
 
 function resolveConfiguredPath(configuredPath: string): string {
@@ -182,4 +201,72 @@ async function getSparqlServerUrl(): Promise<string | null> {
 
 function formatError(error: unknown): string {
 	return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * Ensures the knowboard-lsp binary is downloaded for the current platform.
+ * Skips if the user has configured a custom server path, or if the command
+ * is already available on PATH.
+ */
+async function ensureBinaryDownloaded(
+	context: vscode.ExtensionContext,
+	outputChannel: vscode.OutputChannel,
+): Promise<void> {
+	const config = vscode.workspace.getConfiguration('knowboard');
+	const configuredPath = config.get<string>('server.path', DEFAULT_SERVER_COMMAND).trim();
+
+	// If the user has set a custom path, don't auto-download.
+	if (configuredPath !== DEFAULT_SERVER_COMMAND) {
+		outputChannel.appendLine('[download] Custom server.path set — skipping auto-download.');
+		return;
+	}
+
+	// If the command is already on PATH, skip.
+	if (await isOnPath(DEFAULT_SERVER_COMMAND)) {
+		outputChannel.appendLine(`[download] ${DEFAULT_SERVER_COMMAND} found on PATH — skipping auto-download.`);
+		return;
+	}
+
+	// If already installed in global storage, skip.
+	if (isBinaryInstalled(context)) {
+		outputChannel.appendLine('[download] Binary already installed.');
+		return;
+	}
+
+	const packageJson = vscode.extensions.getExtension('knowboard.knowboard-vscode')?.packageJSON;
+	const version: string | undefined = packageJson?.version;
+
+	if (!version) {
+		outputChannel.appendLine('[download] Could not determine extension version — skipping auto-download.');
+		return;
+	}
+
+	outputChannel.appendLine(`[download] knowboard-lsp v${version} not found locally — downloading...`);
+
+	const result = await vscode.window.withProgress(
+		{
+			location: vscode.ProgressLocation.Notification,
+			title: `Knowboard: downloading knowboard-lsp v${version}...`,
+			cancellable: false,
+		},
+		(progress) => downloadBinary(context, version, outputChannel, progress),
+	);
+
+	if (result) {
+		outputChannel.appendLine(`[download] knowboard-lsp v${version} ready at ${result}`);
+	} else {
+		outputChannel.appendLine(`[download] Auto-download failed — will fall back to PATH.`);
+	}
+}
+
+/**
+ * Checks whether a command is available on the system PATH.
+ */
+async function isOnPath(command: string): Promise<boolean> {
+	try {
+		await which(command);
+		return true;
+	} catch {
+		return false;
+	}
 }
