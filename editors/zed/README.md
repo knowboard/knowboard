@@ -1,4 +1,4 @@
-# Knowboard for VS Code
+# Knowboard for Zed
 
 Knowboard turns your Markdown documents into a Personal Knowlege Base.
 
