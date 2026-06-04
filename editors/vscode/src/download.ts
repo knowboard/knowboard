@@ -5,6 +5,8 @@ import * as zlib from 'node:zlib';
 import * as tar from 'tar';
 import * as vscode from 'vscode';
 
+const VERSION_FILENAME = '.version';
+
 /**
  * Maps Node.js `process.arch` + `process.platform` to Rust target triples.
  * Returns `undefined` for unsupported platforms.
@@ -61,6 +63,13 @@ export function binaryStorageDir(context: vscode.ExtensionContext): string {
 }
 
 /**
+ * Returns the path to the version marker file.
+ */
+export function versionFilePath(context: vscode.ExtensionContext): string {
+	return path.join(binaryStorageDir(context), VERSION_FILENAME);
+}
+
+/**
  * Returns the full path to the downloaded binary.
  */
 export function binaryPath(context: vscode.ExtensionContext): string {
@@ -68,13 +77,21 @@ export function binaryPath(context: vscode.ExtensionContext): string {
 }
 
 /**
- * Checks whether the downloaded binary exists and is executable.
+ * Checks whether the downloaded binary exists, is executable, and matches
+ * the expected version (so extension upgrades trigger a re-download).
  */
-export function isBinaryInstalled(context: vscode.ExtensionContext): boolean {
+export function isBinaryInstalled(context: vscode.ExtensionContext, expectedVersion: string): boolean {
 	const bp = binaryPath(context);
 	try {
 		fs.accessSync(bp, fs.constants.X_OK);
-		return true;
+	} catch {
+		return false;
+	}
+
+	// Check that the stored version matches the extension version.
+	try {
+		const stored = fs.readFileSync(versionFilePath(context), 'utf-8').trim();
+		return stored === expectedVersion;
 	} catch {
 		return false;
 	}
@@ -113,6 +130,8 @@ export async function downloadBinary(
 		if (process.platform !== 'win32') {
 			fs.chmodSync(bp, 0o755);
 		}
+		// Write version marker so isBinaryInstalled can validate.
+		fs.writeFileSync(versionFilePath(context), version, 'utf-8');
 		outputChannel.appendLine(`[download] Binary installed at: ${bp}`);
 		return bp;
 	} catch (error) {

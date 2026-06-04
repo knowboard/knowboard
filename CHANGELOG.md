@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fix
 
 - _(vscode)_ prefer calling `knowboard-lsp` from the PATH if it exists
+- _(vscode)_ store version of downloaded `knowboard-lsp` so we can download updates to match the extension version
 
 ### Other
 

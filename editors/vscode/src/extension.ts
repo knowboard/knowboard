@@ -231,17 +231,17 @@ async function ensureBinaryDownloaded(
 		return;
 	}
 
-	// If already installed in global storage, skip.
-	if (isBinaryInstalled(context)) {
-		outputChannel.appendLine('[download] Binary already installed.');
-		return;
-	}
-
 	const packageJson = vscode.extensions.getExtension('knowboard.knowboard-vscode')?.packageJSON;
 	const version: string | undefined = packageJson?.version;
 
 	if (!version) {
 		outputChannel.appendLine('[download] Could not determine extension version — skipping auto-download.');
+		return;
+	}
+
+	// If the binary for this extension version is already installed, skip.
+	if (isBinaryInstalled(context, version)) {
+		outputChannel.appendLine('[download] Binary already installed.');
 		return;
 	}
 
