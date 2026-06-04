@@ -3,7 +3,7 @@
   "displayName": "Knowboard",
   "description": "Organize your Personal Knowledge Base in Markdown.",
   "icon": "knowboard-blue-yellow-128.png",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "knowboard",
   "license": "SEE LICENSE IN LICENSE.md",
   "repository": {

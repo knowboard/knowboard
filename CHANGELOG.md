@@ -5,12 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.1](https://github.com/knowboard/knowboard/releases/tag/v0.1.1) - 2026-06-04
 
 ### Fix
 
 - _(vscode)_ prefer calling `knowboard-lsp` from the PATH if it exists
 - _(vscode)_ store version of downloaded `knowboard-lsp` so we can download updates to match the extension version
+- _(lsp)_ always include default properties like `kb:label` for Markdown files even if they do not have frontmatter
 
 ### Other
 
