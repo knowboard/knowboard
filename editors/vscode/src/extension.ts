@@ -68,7 +68,7 @@ async function startClient(context: vscode.ExtensionContext, outputChannel: vsco
 	}
 
 	const config = vscode.workspace.getConfiguration('knowboard');
-	const command = resolveServerCommand(config, context);
+	const command = await resolveServerCommand(config, context);
 	const args = config.get<string[]>('server.args', []);
 	const envOverrides = config.get<Record<string, string>>('server.env', {});
 
@@ -120,20 +120,24 @@ async function stopClient(): Promise<void> {
 	}
 }
 
-function resolveServerCommand(config: vscode.WorkspaceConfiguration, context: vscode.ExtensionContext): string {
+async function resolveServerCommand(config: vscode.WorkspaceConfiguration, context: vscode.ExtensionContext): Promise<string> {
 	const configuredPath = config.get<string>('server.path', DEFAULT_SERVER_COMMAND).trim() || DEFAULT_SERVER_COMMAND;
 
 	if (configuredPath !== DEFAULT_SERVER_COMMAND) {
 		return resolveConfiguredPath(configuredPath);
 	}
 
-	// Prefer the auto-downloaded binary if it exists.
+	// Prefer the command from PATH if available.
+	if (await isOnPath(DEFAULT_SERVER_COMMAND)) {
+		return DEFAULT_SERVER_COMMAND;
+	}
+
+	// Fall back to the auto-downloaded binary if it exists.
 	const downloaded = binaryPath(context);
 	try {
 		fs.accessSync(downloaded, fs.constants.X_OK);
 		return downloaded;
 	} catch {
-		// Fall back to PATH.
 		return DEFAULT_SERVER_COMMAND;
 	}
 }

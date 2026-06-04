@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fix
+
+- _(vscode)_ prefer calling `knowboard-lsp` from the PATH if it exists
+
 ### Other
 
 - _(vscode)_ include an icon for the extension
