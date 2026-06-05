@@ -1,7 +1,7 @@
 id = "knowboard"
 name = "Knowboard"
 description = "Organize your Personal Knowledge Base in Markdown."
-version = "0.1.1"
+version = "0.1.2"
 schema_version = 1
 authors = ["Matthew Good"]
 repository = "https://github.com/knowboard/knowboard"
