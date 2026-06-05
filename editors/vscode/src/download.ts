@@ -5,8 +5,6 @@ import * as zlib from 'node:zlib';
 import * as tar from 'tar';
 import * as vscode from 'vscode';
 
-const VERSION_FILENAME = '.version';
-
 /**
  * Maps Node.js `process.arch` + `process.platform` to Rust target triples.
  * Returns `undefined` for unsupported platforms.
@@ -36,16 +34,8 @@ export function detectRustTarget(): string | undefined {
 /**
  * Returns the expected binary name for the current platform.
  */
-export function binaryName(): string {
-	return process.platform === 'win32' ? 'knowboard-lsp.exe' : 'knowboard-lsp';
-}
-
-/**
- * Returns the archive name for a given Rust target triple and version.
- */
-export function archiveName(target: string, version: string): string {
-	const ext = target.includes('windows') ? 'zip' : 'tar.gz';
-	return `knowboard-lsp-${target}.${ext}`;
+export function binaryName(target: string): string {
+	return target?.includes('windows') ? 'knowboard-lsp.exe' : 'knowboard-lsp';
 }
 
 /**
@@ -56,42 +46,36 @@ export function downloadUrl(version: string, target: string): string {
 }
 
 /**
- * Returns the directory where the downloaded binary is stored.
+ * Returns the asset name for a given target triple.
  */
-export function binaryStorageDir(context: vscode.ExtensionContext): string {
-	return path.join(context.globalStorageUri.fsPath, 'bin');
+export function assetName(target: string): string {
+	return `knowboard-lsp-${target}.tar.gz`;
 }
 
 /**
- * Returns the path to the version marker file.
+ * Returns the versioned directory path for the downloaded binary.
+ * The version is baked into the path so extension updates always get a fresh download.
  */
-export function versionFilePath(context: vscode.ExtensionContext): string {
-	return path.join(binaryStorageDir(context), VERSION_FILENAME);
+export function binaryDir(context: vscode.ExtensionContext, version: string, target: string): string {
+	return path.join(context.globalStorageUri.fsPath, 'lsp-bin', version, target);
 }
 
 /**
- * Returns the full path to the downloaded binary.
+ * Returns the full path to the downloaded binary, versioned so extension
+ * upgrades trigger a re-download.
  */
-export function binaryPath(context: vscode.ExtensionContext): string {
-	return path.join(binaryStorageDir(context), binaryName());
+export function binaryPath(context: vscode.ExtensionContext, version: string, target: string): string {
+	return path.join(binaryDir(context, version, target), binaryName(target));
 }
 
 /**
- * Checks whether the downloaded binary exists, is executable, and matches
- * the expected version (so extension upgrades trigger a re-download).
+ * Checks whether the downloaded binary for this version exists and is executable.
  */
-export function isBinaryInstalled(context: vscode.ExtensionContext, expectedVersion: string): boolean {
-	const bp = binaryPath(context);
+export function isBinaryInstalled(context: vscode.ExtensionContext, version: string, target: string): boolean {
+	const bp = binaryPath(context, version, target);
 	try {
 		fs.accessSync(bp, fs.constants.X_OK);
-	} catch {
-		return false;
-	}
-
-	// Check that the stored version matches the extension version.
-	try {
-		const stored = fs.readFileSync(versionFilePath(context), 'utf-8').trim();
-		return stored === expectedVersion;
+		return true;
 	} catch {
 		return false;
 	}
@@ -106,32 +90,33 @@ export function isBinaryInstalled(context: vscode.ExtensionContext, expectedVers
 export async function downloadBinary(
 	context: vscode.ExtensionContext,
 	version: string,
+	target: string,
 	outputChannel: vscode.OutputChannel,
 	progress?: vscode.Progress<{ message?: string; increment?: number }>,
 ): Promise<string | undefined> {
-	const target = detectRustTarget();
-	if (!target) {
-		outputChannel.appendLine(`[download] Unsupported platform: ${process.platform} ${process.arch}`);
-		return undefined;
-	}
-
-	const dir = binaryStorageDir(context);
+	const dir = binaryDir(context, version, target);
 	fs.mkdirSync(dir, { recursive: true });
 
 	const url = downloadUrl(version, target);
-	const bp = binaryPath(context);
+	const bp = binaryPath(context, version, target);
 
 	outputChannel.appendLine(`[download] Downloading knowboard-lsp v${version} for ${target}...`);
 	outputChannel.appendLine(`[download] URL: ${url}`);
 
 	try {
-		await downloadAndExtract(url, dir, outputChannel, progress);
+		// Extract into a temp directory alongside the final binary, then rename.
+		const extractDir = path.join(dir, '.extract');
+		fs.mkdirSync(extractDir, { recursive: true });
+		await downloadAndExtract(url, extractDir, outputChannel, progress);
+
+		const extracted = path.join(extractDir, binaryName(target));
+		fs.renameSync(extracted, bp);
+		fs.rmdirSync(extractDir, { recursive: true });
+
 		// Make executable on Unix
 		if (process.platform !== 'win32') {
 			fs.chmodSync(bp, 0o755);
 		}
-		// Write version marker so isBinaryInstalled can validate.
-		fs.writeFileSync(versionFilePath(context), version, 'utf-8');
 		outputChannel.appendLine(`[download] Binary installed at: ${bp}`);
 		return bp;
 	} catch (error) {

@@ -8,7 +8,7 @@ import {
 	ServerOptions,
 	Trace,
 } from 'vscode-languageclient/node';
-import { binaryPath, downloadBinary, isBinaryInstalled } from './download.js';
+import { binaryPath, detectRustTarget, downloadBinary, isBinaryInstalled } from './download.js';
 import which from 'which';
 
 const CLIENT_ID = 'knowboard';
@@ -133,7 +133,17 @@ async function resolveServerCommand(config: vscode.WorkspaceConfiguration, conte
 	}
 
 	// Fall back to the auto-downloaded binary if it exists.
-	const downloaded = binaryPath(context);
+	const target = detectRustTarget();
+	if (!target) {
+		return DEFAULT_SERVER_COMMAND;
+	}
+
+	const version: string | undefined = context.extension.packageJSON.version;
+	if (!version) {
+		return DEFAULT_SERVER_COMMAND;
+	}
+
+	const downloaded = binaryPath(context, version, target);
 	try {
 		fs.accessSync(downloaded, fs.constants.X_OK);
 		return downloaded;
@@ -231,16 +241,20 @@ async function ensureBinaryDownloaded(
 		return;
 	}
 
-	const packageJson = vscode.extensions.getExtension('knowboard.knowboard-vscode')?.packageJSON;
-	const version: string | undefined = packageJson?.version;
+	const target = detectRustTarget();
+	if (!target) {
+		outputChannel.appendLine(`[download] Unsupported platform: ${process.platform} ${process.arch}`);
+		return;
+	}
 
+	const version: string | undefined = context.extension.packageJSON.version;
 	if (!version) {
 		outputChannel.appendLine('[download] Could not determine extension version — skipping auto-download.');
 		return;
 	}
 
 	// If the binary for this extension version is already installed, skip.
-	if (isBinaryInstalled(context, version)) {
+	if (isBinaryInstalled(context, version, target)) {
 		outputChannel.appendLine('[download] Binary already installed.');
 		return;
 	}
@@ -253,7 +267,7 @@ async function ensureBinaryDownloaded(
 			title: `Knowboard: downloading knowboard-lsp v${version}...`,
 			cancellable: false,
 		},
-		(progress) => downloadBinary(context, version, outputChannel, progress),
+		(progress) => downloadBinary(context, version, target, outputChannel, progress),
 	);
 
 	if (result) {
