@@ -145,6 +145,12 @@
           ],
           "default": "off",
           "description": "Trace verbosity for the LSP protocol connection."
+        },
+        "knowboard.experimental.sparqlUpdates": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable SPARQL UPDATE support (INSERT/DELETE).",
+          "markdownDescription": "Run SPARQL UPDATE queries in the editor.\n\n**⚠️ Warning:** This is an experimental feature. Edited files are automatically reformatted, removing existing comments or formatting. Ensure you have version control or backups to avoid data loss."
         }
       }
     }

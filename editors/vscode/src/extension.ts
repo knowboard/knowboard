@@ -6,8 +6,10 @@ import {
 	LanguageClientOptions,
 	RevealOutputChannelOn,
 	ServerOptions,
+	ShowMessageRequest,
 	Trace,
 } from 'vscode-languageclient/node';
+import type { MessageActionItem, ShowMessageRequestParams } from 'vscode-languageserver-protocol';
 import { binaryPath, detectRustTarget, downloadBinary, isBinaryInstalled } from './download.js';
 import which from 'which';
 
@@ -53,6 +55,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		if (event.affectsConfiguration('knowboard.trace.server') && client) {
 			await client.setTrace(traceSetting());
 		}
+
+		if (event.affectsConfiguration('knowboard.experimental') && client) {
+			client.sendNotification('workspace/didChangeConfiguration', {
+				settings: {
+					experimental: {
+						sparqlUpdates: vscode.workspace.getConfiguration('knowboard').get<boolean>('experimental.sparqlUpdates', false),
+					},
+				},
+			});
+		}
 	}));
 
 	await startClient(context, outputChannel);
@@ -87,6 +99,11 @@ async function startClient(context: vscode.ExtensionContext, outputChannel: vsco
 		],
 		outputChannel,
 		revealOutputChannelOn: RevealOutputChannelOn.Never,
+		initializationOptions: {
+			experimental: {
+				sparqlUpdates: vscode.workspace.getConfiguration('knowboard').get<boolean>('experimental.sparqlUpdates', false),
+			},
+		},
 	};
 
 	outputChannel.appendLine(`Starting ${CLIENT_NAME}: ${command}${args.length > 0 ? ` ${args.join(' ')}` : ''}`);
@@ -97,6 +114,19 @@ async function startClient(context: vscode.ExtensionContext, outputChannel: vsco
 	try {
 		await nextClient.start();
 		await nextClient.setTrace(traceSetting());
+
+		// Override window/showMessageRequest to show a quick pick menu.
+		nextClient.onRequest(ShowMessageRequest.type, async (params) => {
+			const actions = params.actions ?? [];
+			const chosen = await vscode.window.showQuickPick(
+				actions.map(a => ({ label: a.title, action: a })),
+				{
+					placeHolder: params.message,
+					ignoreFocusOut: true,
+				},
+			);
+			return chosen?.action ?? null;
+		});
 	} catch (error) {
 		client = undefined;
 		outputChannel.appendLine(`Failed to start ${CLIENT_NAME}: ${formatError(error)}`);
