@@ -151,6 +151,18 @@
           "default": false,
           "description": "Enable SPARQL UPDATE support (INSERT/DELETE).",
           "markdownDescription": "Run SPARQL UPDATE queries in the editor.\n\n**⚠️ Warning:** This is an experimental feature. Edited files are automatically reformatted, removing existing comments or formatting. Ensure you have version control or backups to avoid data loss."
+        },
+        "knowboard.experimental.turtleEdits": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable enhanced reserialization of Turtle files that preserves formatting when applying SPARQL updates.",
+          "markdownDescription": "Enable enhanced reserialization of Turtle files that preserve formatting when applying SPARQL updates."
+        },
+        "knowboard.experimental.iconInlayHints": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show shape-based icons next to wiki links and RDF subject references.",
+          "markdownDescription": "Show shape-based icons next to wiki links and RDF subject references."
         }
       }
     }

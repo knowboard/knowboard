@@ -59,9 +59,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		if (event.affectsConfiguration('knowboard.experimental') && client) {
 			client.sendNotification('workspace/didChangeConfiguration', {
 				settings: {
-					experimental: {
-						sparqlUpdates: vscode.workspace.getConfiguration('knowboard').get<boolean>('experimental.sparqlUpdates', false),
-					},
+					experimental: experimentalSettings(),
 				},
 			});
 		}
@@ -100,9 +98,7 @@ async function startClient(context: vscode.ExtensionContext, outputChannel: vsco
 		outputChannel,
 		revealOutputChannelOn: RevealOutputChannelOn.Never,
 		initializationOptions: {
-			experimental: {
-				sparqlUpdates: vscode.workspace.getConfiguration('knowboard').get<boolean>('experimental.sparqlUpdates', false),
-			},
+			experimental: experimentalSettings(),
 		},
 	};
 
@@ -205,6 +201,19 @@ function buildServerEnv(envOverrides: Record<string, string>): NodeJS.ProcessEnv
 		...envOverrides,
 	};
 	return env;
+}
+
+function experimentalSettings(): {
+	sparqlUpdates: boolean;
+	turtleEdits: boolean;
+	iconInlayHints: boolean;
+} {
+	const config = vscode.workspace.getConfiguration('knowboard');
+	return {
+		sparqlUpdates: config.get<boolean>('experimental.sparqlUpdates', false),
+		turtleEdits: config.get<boolean>('experimental.turtleEdits', false),
+		iconInlayHints: config.get<boolean>('experimental.iconInlayHints', false),
+	};
 }
 
 function traceSetting(): Trace {

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+- _(lsp)_ enhanced SPARQL updates for Turtle files to edit in-place, preserving comments and formatting. Enabled via experimental option.
+
 ## [0.2.0](https://github.com/knowboard/knowboard/releases/tag/v0.2.0) - 2026-07-11
 
 ### Added
