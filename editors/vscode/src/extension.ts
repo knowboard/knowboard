@@ -9,7 +9,7 @@ import {
 	ShowMessageRequest,
 	Trace,
 } from 'vscode-languageclient/node';
-import type { MessageActionItem, ShowMessageRequestParams } from 'vscode-languageserver-protocol';
+import type { Location, MessageActionItem, Position, ShowMessageRequestParams } from 'vscode-languageserver-protocol';
 import { binaryPath, detectRustTarget, downloadBinary, isBinaryInstalled } from './download.js';
 import which from 'which';
 
@@ -44,6 +44,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 		const sparqlUrl = `${baseUrl}/sparql`;
 		await vscode.env.clipboard.writeText(sparqlUrl);
 		vscode.window.showInformationMessage(`Copied SPARQL URL: ${sparqlUrl}`);
+	}));
+
+	context.subscriptions.push(vscode.commands.registerCommand('knowboard.showReferences', async (uri: string, position: Position, locations: Location[]) => {
+		const converter = client?.protocol2CodeConverter;
+		if (!converter) {
+			return;
+		}
+		await vscode.commands.executeCommand(
+			'editor.action.showReferences',
+			vscode.Uri.parse(uri),
+			converter.asPosition(position),
+			locations.map(location => converter.asLocation(location)),
+		);
 	}));
 
 	context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(async event => {
