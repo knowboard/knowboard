@@ -1,0 +1,78 @@
+[env]
+# Fixed output path for dev builds; the versioned default comes from vsce itself.
+VSIX_DEV_PATH = "knowboard-vscode.vsix"
+
+[tasks.bump-version]
+description = "Bump the release version across editor manifests and the changelog"
+usage = '''
+arg "<version>" help="Release version to set, e.g. 0.3.0"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+new_version="${usage_version?}"
+release_date="$(date +%F)"
+
+# Fail before touching anything if the version is not plain MAJOR.MINOR.PATCH.
+if [[ ! "$new_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+	printf 'error: version must be MAJOR.MINOR.PATCH (got %s)\n' "$new_version" >&2
+	exit 1
+fi
+
+# We delegate the lockfile edits to npm and cargo, so bail out now rather than
+# leaving a half-bumped repo if either is missing.
+for tool in cargo npm; do
+	if ! command -v "$tool" >/dev/null 2>&1; then
+		printf 'error: %s is not on PATH\n' "$tool" >&2
+		exit 1
+	fi
+done
+
+# The Unreleased heading is the source of truth for "is there anything to release?".
+if ! grep -qE '^## \[?Unreleased\]?[[:space:]]*$' CHANGELOG.md; then
+	echo 'error: CHANGELOG.md has no "## Unreleased" heading to graduate' >&2
+	exit 1
+fi
+
+# vscode: npm rewrites the manifest and the matching package-lock entries.
+(cd editors/vscode && npm version "$new_version" --no-git-tag-version >/dev/null)
+
+# zed: the two manifests, then let cargo derive Cargo.lock from Cargo.toml.
+NEW="$new_version" perl -pi -e 's/^version = "[^"]+"/version = "$ENV{NEW}"/' \
+	editors/zed/Cargo.toml editors/zed/extension.toml
+(cd editors/zed && cargo update -p knowboard-zed)
+
+# changelog: graduate Unreleased into a dated, linked release heading.
+# `!` delimiters keep the replacement away from a brace-hash sequence, which
+# mise's Tera pass would otherwise read as the start of a template comment.
+NEW="$new_version" DATE="$release_date" perl -pi -e \
+	's!^## \[?Unreleased\]?[ \t]*$!## [$ENV{NEW}](https://github.com/knowboard/knowboard/releases/tag/v$ENV{NEW}) - $ENV{DATE}!' \
+	CHANGELOG.md
+
+printf 'released %s (%s)\n' "$new_version" "$release_date"
+# Recap only; never let a missing repo turn a successful bump into a failure.
+git --no-pager diff --stat -- CHANGELOG.md editors || true
+'''
+
+[tasks.package-vscode]
+description = "Build and package the VS Code extension into a .vsix"
+dir = "editors/vscode"
+usage = '''
+flag "--dev" help="Write to the fixed dev path instead of the versioned one"
+'''
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "${usage_dev:-false}" = "true" ]; then
+  pnpx @vscode/vsce package --out "$VSIX_DEV_PATH"
+else
+  pnpx @vscode/vsce package
+fi
+'''
+
+[tasks.install-vscode]
+description = "Package the VS Code extension and install it as a local dev build"
+dir = "editors/vscode"
+run = "mise run package-vscode --dev && code --install-extension \"$VSIX_DEV_PATH\" --force"
