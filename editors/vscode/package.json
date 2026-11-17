@@ -2,8 +2,8 @@
   "name": "knowboard-vscode",
   "displayName": "Knowboard",
   "description": "Organize your Personal Knowledge Base in Markdown.",
-  "icon": "knowboard-blue-yellow-128.png",
-  "version": "0.3.0",
+  "icon": "knowboard-128.png",
+  "version": "0.3.1",
   "publisher": "knowboard",
   "license": "SEE LICENSE IN LICENSE.md",
   "repository": {
